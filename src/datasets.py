@@ -31,6 +31,7 @@ class Diagonal(Dataset):
         return cls(X, y)
 
     def visualize(self):
+        # CR TODO: update this to optionally output to file
         """Visualize the dataset."""
         plt.scatter(
             self.X[:, 0], self.X[:, 1], c=np.argmax(self.y, axis=1), cmap="viridis"
