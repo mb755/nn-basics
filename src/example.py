@@ -1,10 +1,11 @@
 from datasets import Diagonal
 from layers import Dense, ReLU, Softmax
 from network import NeuralNetwork
+from visualizations import visualize_2D_classification_data
 
 # Create a dataset
 training_data = Diagonal.generate(1000, 0.1)
-training_data.visualize()
+visualize_2D_classification_data(training_data)
 
 test_data = Diagonal.generate(500, 0.1)
 
@@ -19,4 +20,4 @@ network.train(training_data, test_data, epochs=1000, learning_rate=0.001)
 # evaluate and visualize predictions
 predictions = Diagonal(test_data.X, network.predict(test_data.X))
 
-predictions.visualize()
+visualize_2D_classification_data(predictions)
