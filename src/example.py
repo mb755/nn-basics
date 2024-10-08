@@ -1,7 +1,11 @@
 from datasets import Diagonal
 from layers import Dense, ReLU, Softmax
 from network import NeuralNetwork
-from visualizations import visualize_2D_classification_data, visualize_network
+from visualizations import (
+    visualize_2D_classification_data,
+    visualize_network,
+    visualize_decision_boundary,
+)
 
 # Create a dataset
 training_data = Diagonal.generate(1000, 0.1)
@@ -23,3 +27,5 @@ predictions = Diagonal(test_data.X, network.predict(test_data.X))
 visualize_2D_classification_data(predictions)
 
 visualize_network(network, test_data)
+
+visualize_decision_boundary(network, test_data)
