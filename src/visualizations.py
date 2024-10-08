@@ -43,24 +43,34 @@ def generate_neuron_image(network, layer_index, neuron_index):
 def visualize_network(model, dataset):
     # CR TODO: don't use the dataset, use an input range instead?
     X = dataset.X
-
     G = nx.DiGraph()
-
     layer_sizes = [X.shape[1]]
     layer_weights = []
+    layer_biases = []  # New list to store biases
     for layer in model.layers:
         if isinstance(layer, Dense):
             layer_sizes.append(layer.output_size)
             layer_weights.append(layer.weights)
+            layer_biases.append(np.squeeze(layer.bias))  # Store biases
         elif isinstance(layer, Softmax):
             layer_sizes.append(layer_sizes[-1])
             layer_weights.append(np.zeros((layer_sizes[-1], layer_sizes[-1])))
+            layer_biases.append(
+                np.zeros(layer_sizes[-1])
+            )  # Add zero biases for Softmax
 
     pos = {}
+    node_biases = {}  # Dictionary to store bias values for each node
     for i, size in enumerate(layer_sizes):
         for j in range(size):
-            G.add_node(f"L{i}_{j}")
-            pos[f"L{i}_{j}"] = (i, j - size / 2 + 0.5)
+            node_id = f"L{i}_{j}"
+            G.add_node(node_id)
+            pos[node_id] = (i, j - size / 2 + 0.5)
+            # Store bias value for the node (0 for input layer)
+            if i == 0:
+                node_biases[node_id] = 0
+            else:
+                node_biases[node_id] = layer_biases[i - 1][j]
 
     weights = []
     for i in range(len(layer_sizes) - 1):
@@ -72,15 +82,20 @@ def visualize_network(model, dataset):
 
     _, ax = plt.subplots(figsize=(10, 10))
 
+    # Calculate maximum absolute values for normalization
+    max_abs_weight = max(abs(np.array(weights)))
+    max_abs_bias = max(abs(np.array(list(node_biases.values()))))
+
+    # Draw edges
     nx.draw_networkx_edges(
         G,
         pos,
         ax=ax,
         edge_color=weights,
         edge_cmap=plt.cm.RdYlBu,
-        edge_vmin=-max(abs(np.array(weights))),
-        edge_vmax=max(abs(np.array(weights))),
-        width=[abs(w) * 4 / max(abs(np.array(weights))) for w in weights],
+        edge_vmin=-max_abs_weight,
+        edge_vmax=max_abs_weight,
+        width=[abs(w) * 4 / max_abs_weight for w in weights],
         arrowsize=20,
         arrows=True,
         arrowstyle="-",
@@ -89,20 +104,21 @@ def visualize_network(model, dataset):
     )
 
     icon_size = (ax.get_xlim()[1] - ax.get_xlim()[0]) * 0.05
-
     for n in G.nodes:
-
         parts = n[1:].split("_")
         if len(parts) < 2:  # Skip nodes that don't follow the L{layer}_{neuron} format
             continue
         layer, neuron = int(parts[0]), int(parts[1])
-
         x, y = pos[n]
-
         if layer == 0:  # Input layer
             image = np.ones((100, 100, 3)) * 0.8  # Light gray for input
         else:
             image = generate_neuron_image(model, layer, neuron)
+
+        # Calculate border properties based on bias
+        bias = node_biases[n]
+        border_color = plt.cm.RdYlBu((bias + max_abs_bias) / (2 * max_abs_bias))
+        border_width = abs(bias) * 4 / max_abs_bias if max_abs_bias != 0 else 0
 
         # Calculate the extent of the image
         extent = [
@@ -112,12 +128,24 @@ def visualize_network(model, dataset):
             y + icon_size / 2,
         ]
 
-        # Display the image
-        ax.imshow(
-            image, extent=extent, zorder=2
-        )  # zorder=2 to ensure it's above the edges
+        # Draw border rectangle
+        rect = plt.Rectangle(
+            (extent[0], extent[2]),
+            icon_size,
+            icon_size,
+            facecolor="none",
+            edgecolor=border_color,
+            linewidth=border_width,
+            zorder=1,
+        )
+        ax.add_patch(rect)
 
-    ax.set_title("Neural Network Architecture")
+        # Display the image
+        ax.imshow(image, extent=extent, zorder=2)
+
+    ax.set_title(
+        "Neural Network Architecture\n(Edges represent weights, borders represent biases)"
+    )
     ax.set_xlim(
         min(pos.values(), key=lambda x: x[0])[0] - 0.5,
         max(pos.values(), key=lambda x: x[0])[0] + 0.5,
@@ -127,7 +155,6 @@ def visualize_network(model, dataset):
         max(pos.values(), key=lambda x: x[1])[1] + 0.5,
     )
     ax.axis("off")
-
     plt.tight_layout()
     plt.show()
 
