@@ -47,11 +47,14 @@ def visualize_network(model, dataset):
     G = nx.DiGraph()
 
     layer_sizes = [X.shape[1]]
+    layer_weights = []
     for layer in model.layers:
         if isinstance(layer, Dense):
             layer_sizes.append(layer.output_size)
+            layer_weights.append(layer.weights)
         elif isinstance(layer, Softmax):
             layer_sizes.append(layer_sizes[-1])
+            layer_weights.append(np.zeros((layer_sizes[-1], layer_sizes[-1])))
 
     pos = {}
     for i, size in enumerate(layer_sizes):
@@ -59,10 +62,13 @@ def visualize_network(model, dataset):
             G.add_node(f"L{i}_{j}")
             pos[f"L{i}_{j}"] = (i, j - size / 2 + 0.5)
 
+    weights = []
     for i in range(len(layer_sizes) - 1):
         for j in range(layer_sizes[i]):
             for k in range(layer_sizes[i + 1]):
-                G.add_edge(f"L{i}_{j}", f"L{i+1}_{k}")
+                weight = layer_weights[i][j, k]
+                weights.append(weight)
+                G.add_edge(f"L{i}_{j}", f"L{i+1}_{k}", weight=weight)
 
     _, ax = plt.subplots(figsize=(10, 10))
 
@@ -70,6 +76,12 @@ def visualize_network(model, dataset):
         G,
         pos,
         ax=ax,
+        edge_color=weights,
+        edge_cmap=plt.cm.RdYlBu,
+        edge_vmin=-max(abs(np.array(weights))),
+        edge_vmax=max(abs(np.array(weights))),
+        width=[abs(w) * 4 / max(abs(np.array(weights))) for w in weights],
+        arrowsize=20,
         arrows=True,
         arrowstyle="-",
         min_source_margin=15,
