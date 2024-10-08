@@ -143,9 +143,7 @@ def visualize_network(model, dataset):
         # Display the image
         ax.imshow(image, extent=extent, zorder=2)
 
-    ax.set_title(
-        "Neural Network Architecture\n(Edges represent weights, borders represent biases)"
-    )
+    ax.set_title("Neural Network Architecture")
     ax.set_xlim(
         min(pos.values(), key=lambda x: x[0])[0] - 0.5,
         max(pos.values(), key=lambda x: x[0])[0] + 0.5,
